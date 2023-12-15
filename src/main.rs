@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 const N_ACTIONS: i32 = 2;
-const N_ITERATIONS: i32 = 10000;
+const N_ITERATIONS: i32 = 100;
 const N_CARDS: i32 = 3;
 
 #[derive(Clone)]
@@ -189,12 +189,15 @@ fn chance_util(i_map: &mut HashMap<String, InformationSet>) -> f32 {
     let mut expected_value = 0.0;
     let n_possibilities = 6;
     for _i in 1..N_CARDS {
-        for j in 1..N_CARDS {
+        for _j in 1..N_CARDS {
+            if _i == _j {
+                continue;
+            }
             expected_value += cfr(
                 i_map,
                 "rr".to_string(),
                 _i,
-                j,
+                _j,
                 1.0,
                 1.0,
                 1.0 / n_possibilities as f32,
