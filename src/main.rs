@@ -9,12 +9,17 @@ struct InformationSet {
     reach_pr: f32,
 }
 
+impl InformationSet {
+    fn next_strategy(&self) -> Vec<f32> {
+        return self.strategy;
+    }
+}
+
 /// counterfactual regret minimizationのiterationを行う
 fn main() {
-    let mut i_map = HashMap::new();
-    i_map.insert("aaa", 0);
+    let mut i_map: HashMap<String, InformationSet> = HashMap::new();
     const N_ITERATIONS: i32 = 10000;
-    let mut expected_game_value: i32 = 0;
+    let mut expected_game_value = 0.0;
 
     for i in 1..N_ITERATIONS {
         expected_game_value += cfr(i_map, String::from(""), -1, -1, 1.0, 1.0, 1.0);
@@ -23,7 +28,7 @@ fn main() {
         }
     }
 
-    expected_game_value /= N_ITERATIONS;
+    expected_game_value /= N_ITERATIONS as f32;
 
     println!("expected game value: {}", expected_game_value);
 }
@@ -37,7 +42,7 @@ fn cfr(
     pr_1: f32,
     pr_2: f32,
     pr_c: f32,
-) -> i32 {
+) -> f32 {
     if is_chance_node(history) {
         return chance_util(i_map);
     }
@@ -103,12 +108,46 @@ fn cfr(
     let regrets = action_utils.iter().map(|u| u - util);
 
     if is_player_1 {
-        info_set.regret_sum += pr_2 * pr_c * regrets;
+        info_set
+            .regret_sum
+            .iter_mut()
+            .zip(regrets)
+            .for_each(|(r, u)| *r += pr_2 * pr_c * u);
     } else {
-        info_set.regret_sum += pr_1 * pr_c * regrets;
+        info_set
+            .regret_sum
+            .iter_mut()
+            .zip(regrets)
+            .for_each(|(r, u)| *r += pr_1 * pr_c * u);
     }
 
     return util;
+}
 
-    return 1;
+fn is_chance_node(history: String) -> bool {
+    return history == "";
+}
+
+fn chance_util(i_map: HashMap<String, InformationSet>) -> f32 {
+    let mut expected_value = 0.0;
+    let n_possibilities = 6;
+    for i in 1..N_CARDS {
+        for j in 1..N_CARDS {
+            expected_value += cfr(
+                i_map,
+                "rr".to_string(),
+                i,
+                j,
+                1.0,
+                1.0,
+                1.0 / n_possibilities as f32,
+            );
+        }
+    }
+    expected_value / n_possibilities as f32
+}
+
+fn is_terminal(history: String) -> bool {
+    let possible_terminal = vec!["rrcc", "rrcbc", "rrcbb", "rrbc", "rrbb"];
+    possible_terminal.contains(&history.as_str())
 }
