@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 const N_ACTIONS: i32 = 2;
-const N_ITERATIONS: i32 = 2;
+const N_ITERATIONS: i32 = 10000;
 const N_CARDS: i32 = 3;
 
 #[derive(Clone)]
@@ -72,6 +72,19 @@ impl std::fmt::Display for InformationSet {
             strategies[0].to_string(),
             strategies[1].to_string(),
         )
+    }
+}
+
+impl Default for InformationSet {
+    fn default() -> Self {
+        InformationSet {
+            key: "".to_string(),
+            regret_sum: vec![0.0; N_ACTIONS as usize],
+            strategy_sum: vec![0.0; N_ACTIONS as usize],
+            strategy: vec![0.0; N_ACTIONS as usize],
+            reach_pr: 0.0,
+            reach_pr_sum: 0.0,
+        }
     }
 }
 
@@ -152,11 +165,11 @@ fn cfr(
         return terminal_util(&history, card_1, card_2);
     }
 
-    let n: usize = history.len();
-    let is_player_1: bool = n % 2 == 0;
+    let n = history.len();
+    let is_player_1 = n % 2 == 0;
     let card = if is_player_1 { card_1 } else { card_2 };
-    let pr = if is_player_1 { pr_1 } else { pr_2 };
-    update_info_set(i_map, card, &history, pr);
+    let added_pr = if is_player_1 { pr_1 } else { pr_2 };
+    update_info_set(i_map, card, &history, added_pr);
 
     // counterfactual utility per action
     let mut action_utils = vec![0.0; N_ACTIONS as usize];
@@ -287,11 +300,7 @@ fn get_info_set<'a>(
     if !i_map.contains_key(&key) {
         let new_info_set = InformationSet {
             key: key.clone(),
-            regret_sum: vec![0.0; N_ACTIONS as usize],
-            strategy_sum: vec![0.0; N_ACTIONS as usize],
-            strategy: vec![0.0; N_ACTIONS as usize],
-            reach_pr: 0.0,
-            reach_pr_sum: 0.0,
+            ..Default::default()
         };
         i_map.insert(key.clone(), new_info_set);
     }
