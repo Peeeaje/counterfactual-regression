@@ -188,8 +188,8 @@ fn is_chance_node(history: &str) -> bool {
 fn chance_util(i_map: &mut HashMap<String, InformationSet>) -> f32 {
     let mut expected_value = 0.0;
     let n_possibilities = 6;
-    for _i in 1..N_CARDS {
-        for _j in 1..N_CARDS {
+    for _i in 0..N_CARDS {
+        for _j in 0..N_CARDS {
             if _i == _j {
                 continue;
             }
