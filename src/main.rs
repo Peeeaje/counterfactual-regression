@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 const N_ACTIONS: i32 = 2;
-const N_ITERATIONS: i32 = 100;
+const N_ITERATIONS: i32 = 2;
 const N_CARDS: i32 = 3;
 
 #[derive(Clone)]
@@ -80,7 +80,7 @@ fn main() {
     let mut i_map: HashMap<String, InformationSet> = HashMap::new();
     let mut expected_game_value = 0.0;
 
-    for _i in 1..N_ITERATIONS {
+    for _i in 0..N_ITERATIONS {
         expected_game_value += cfr(&mut i_map, String::from(""), -1, -1, 1.0, 1.0, 1.0);
         for (_key, value) in i_map.iter_mut() {
             value.next_strategy();
@@ -88,6 +88,50 @@ fn main() {
     }
     expected_game_value /= N_ITERATIONS as f32;
     display_result(expected_game_value, &i_map);
+}
+
+fn update_info_set(
+    mut i_map: &mut HashMap<String, InformationSet>,
+    card: i32,
+    history: &str,
+    pr: f32,
+) {
+    let info_set = get_info_set(&mut i_map, card, history);
+    info_set.reach_pr += pr;
+}
+
+fn get_strategy(i_map: &mut HashMap<String, InformationSet>, card: i32, history: &str) -> Vec<f32> {
+    let info_set = get_info_set(i_map, card, history);
+    info_set.strategy.clone()
+}
+
+fn update_regret_sum(
+    i_map: &mut HashMap<String, InformationSet>,
+    card: i32,
+    history: &str,
+    action_utils: Vec<f32>,
+    is_player_1: bool,
+    util: f32,
+    pr_1: f32,
+    pr_2: f32,
+    pr_c: f32,
+) {
+    let info_set = get_info_set(i_map, card, history);
+    let regrets = action_utils.iter().map(|u| u - util);
+
+    if is_player_1 {
+        info_set
+            .regret_sum
+            .iter_mut()
+            .zip(regrets)
+            .for_each(|(r, u)| *r += pr_2 * pr_c * u);
+    } else {
+        info_set
+            .regret_sum
+            .iter_mut()
+            .zip(regrets)
+            .for_each(|(r, u)| *r += pr_1 * pr_c * u);
+    }
 }
 
 /// counterfactual regret minimization algorithm
@@ -110,24 +154,13 @@ fn cfr(
 
     let n: usize = history.len();
     let is_player_1: bool = n % 2 == 0;
-
-    let mut info_set: InformationSet;
-    if is_player_1 {
-        info_set = get_info_set(&mut i_map, card_1, &history);
-    } else {
-        info_set = get_info_set(&mut i_map, card_2, &history);
-    }
-
-    let strategy = info_set.strategy;
-
-    if is_player_1 {
-        info_set.reach_pr += pr_1;
-    } else {
-        info_set.reach_pr += pr_2;
-    }
+    let card = if is_player_1 { card_1 } else { card_2 };
+    let pr = if is_player_1 { pr_1 } else { pr_2 };
+    update_info_set(i_map, card, &history, pr);
 
     // counterfactual utility per action
     let mut action_utils = vec![0.0; N_ACTIONS as usize];
+    let strategy = get_strategy(i_map, card, &history);
 
     for (i, action) in vec!["c", "b"].iter().enumerate() {
         let next_history = format!("{}{}", history, action);
@@ -162,21 +195,17 @@ fn cfr(
         .map(|(&u, &s)| u * s)
         .sum();
 
-    let regrets = action_utils.iter().map(|u| u - util);
-
-    if is_player_1 {
-        info_set
-            .regret_sum
-            .iter_mut()
-            .zip(regrets)
-            .for_each(|(r, u)| *r += pr_2 * pr_c * u);
-    } else {
-        info_set
-            .regret_sum
-            .iter_mut()
-            .zip(regrets)
-            .for_each(|(r, u)| *r += pr_1 * pr_c * u);
-    }
+    update_regret_sum(
+        &mut i_map,
+        card,
+        &history,
+        action_utils,
+        is_player_1,
+        util,
+        pr_1,
+        pr_2,
+        pr_c,
+    );
 
     return util;
 }
@@ -245,20 +274,17 @@ fn card_str(card: i32) -> String {
     match card {
         0 => return "J".to_string(),
         1 => return "Q".to_string(),
-        2 => return "K".to_string(),
-        _ => return "".to_string(),
+        _ => return "K".to_string(),
     }
 }
 
-fn get_info_set(
-    i_map: &mut HashMap<String, InformationSet>,
+fn get_info_set<'a>(
+    i_map: &'a mut HashMap<String, InformationSet>,
     card: i32,
     history: &str,
-) -> InformationSet {
+) -> &'a mut InformationSet {
     let key = format!("{} {}", card_str(card), history);
-    let info_set = i_map.get(&key);
-
-    if info_set.is_none() {
+    if !i_map.contains_key(&key) {
         let new_info_set = InformationSet {
             key: key.clone(),
             regret_sum: vec![0.0; N_ACTIONS as usize],
@@ -269,7 +295,7 @@ fn get_info_set(
         };
         i_map.insert(key.clone(), new_info_set);
     }
-    return i_map.get(&key.clone()).unwrap().clone();
+    return i_map.get_mut(&key).unwrap();
 }
 
 fn display_result(expected_game_value: f32, i_map: &HashMap<String, InformationSet>) {
