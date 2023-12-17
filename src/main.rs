@@ -4,13 +4,32 @@ const N_ACTIONS: i32 = 2;
 const N_ITERATIONS: i32 = 10000;
 const N_CARDS: i32 = 3;
 
+/// Information Set.
 #[derive(Clone)]
 struct InformationSet {
+    /// Key of information set.
+    /// Key is composed of card and history.
+    /// e.g. "J rrcb" means player 1 has J and history is "rrcb".
     key: String,
+    /// Regret sum of information set.
+    /// Regret sum is a vector where each element is the sum of regrets for a specific action.
+    /// e.g. [1.0, 2.0] means the sum of regrets for action "c" is 1.0 and for action "b" is 2.0.
     regret_sum: Vec<f32>,
+    /// Strategy sum of information set.
+    /// Strategy sum is a vector where each element is the sum of strategies for a specific action.
+    /// e.g. [1.0, 2.0] means the sum of strategies for action "c" is 1.0 and for action "b" is 2.0.
     strategy_sum: Vec<f32>,
+    /// Strategy of information set.
+    /// Strategy is a vector where each element is the probability of a specific action.
+    /// e.g. [0.5, 0.5] means the probability of action "c" is 0.5 and of action "b" is 0.5.
     strategy: Vec<f32>,
+    /// Reach probability of information set.
+    /// Reach probability is probability of reaching this information set.
+    /// e.g. 0.5 means probability of reaching this information set is 0.5.
     reach_pr: f32,
+    /// Reach probability sum of information set.
+    /// Reach probability sum is sum of reach probability of each iteration.
+    /// e.g. 10.0 means sum of reach probability of each iteration is 10.0.
     reach_pr_sum: f32,
 }
 
