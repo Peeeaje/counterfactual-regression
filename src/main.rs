@@ -81,14 +81,17 @@ impl Default for InformationSet {
             key: "".to_string(),
             regret_sum: vec![0.0; N_ACTIONS as usize],
             strategy_sum: vec![0.0; N_ACTIONS as usize],
-            strategy: vec![0.0; N_ACTIONS as usize],
+            strategy: vec![1.0 / N_ACTIONS as f32; N_ACTIONS as usize],
             reach_pr: 0.0,
             reach_pr_sum: 0.0,
         }
     }
 }
 
-/// counterfactual regret minimizationのiterationを行う
+///　main function
+/// 1. initialize information set map
+/// 2. iterate CFR
+/// 3. display result
 fn main() {
     let mut i_map: HashMap<String, InformationSet> = HashMap::new();
     let mut expected_game_value = 0.0;
@@ -103,7 +106,7 @@ fn main() {
     display_result(expected_game_value, &i_map);
 }
 
-fn update_info_set(
+fn update_reach_pr(
     mut i_map: &mut HashMap<String, InformationSet>,
     card: i32,
     history: &str,
@@ -147,7 +150,19 @@ fn update_regret_sum(
     }
 }
 
-/// counterfactual regret minimization algorithm
+/// Counterfactual Regret Minimization Algorithm.
+///
+/// # Arguments
+/// * `i_map` - Map of information set
+/// * `history` - History of game
+/// * `card_1` - Card of player 1
+/// * `card_2` - Card of player 2
+/// * `pr_1` - Probability of player 1 reaching this node/history
+/// * `pr_2` - Probability of player 2 reaching this node/history
+/// * `pr_c` - Probability contribution of chance to reach this node/history
+///
+/// # Returns
+/// * `util` - Utility of information set
 fn cfr(
     mut i_map: &mut HashMap<String, InformationSet>,
     history: String,
@@ -165,11 +180,10 @@ fn cfr(
         return terminal_util(&history, card_1, card_2);
     }
 
-    let n = history.len();
-    let is_player_1 = n % 2 == 0;
+    let is_player_1 = history.len() % 2 == 0;
     let card = if is_player_1 { card_1 } else { card_2 };
     let added_pr = if is_player_1 { pr_1 } else { pr_2 };
-    update_info_set(i_map, card, &history, added_pr);
+    update_reach_pr(i_map, card, &history, added_pr);
 
     // counterfactual utility per action
     let mut action_utils = vec![0.0; N_ACTIONS as usize];
@@ -255,12 +269,12 @@ fn is_terminal(history: &str) -> bool {
 }
 
 fn terminal_util(history: &str, card_1: i32, card_2: i32) -> f32 {
-    let player_card = if history.len() / 2 == 0 {
+    let player_card = if history.len() % 2 == 0 {
         card_1
     } else {
         card_2
     };
-    let opponent_card = if history.len() / 2 == 0 {
+    let opponent_card = if history.len() % 2 == 0 {
         card_2
     } else {
         card_1
